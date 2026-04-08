@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>База даних суден</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent: #007bff;
+            --border: #333;
+            --success: #28a745;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .ship-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .ship-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        .ship-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+        .ship-detail {
+            font-size: 14px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .ship-detail strong {
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+        .copy-btn {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #3a3a3a;
+            color: var(--text-main);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.2s, color 0.2s;
+            text-align: center;
+        }
+        .copy-btn:hover {
+            background-color: #4a4a4a;
+        }
+        .no-results {
+            text-align: center;
+            grid-column: 1 / -1;
+            color: var(--text-muted);
+            font-size: 18px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🚢 Пошук Суден</h2>
+
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="Пошук за назвою судна (напр. BOZKURT)...">
+        
+        <select id="countrySelect"><option value="">🌍 Всі країни</option></select>
+        <select id="typeSelect"><option value="">🚢 Всі типи суден</option></select>
+        <select id="directionSelect"><option value="">🧭 Будь-який напрямок</option></select>
+        <select id="locationSelect"><option value="">📍 Будь-яка миля/причал</option></select>
+    </div>
+
+    <div class="ship-list" id="shipList">
+        </div>
+
+    <script>
+        const ships = [
+            { name: "BOZKURT", type: "Вантажне судно", country: "Ліберія 🇱🇷", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "EFEGE", type: "Вантажне судно", country: "Сьєрра-Леоне 🇸🇱", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "HALISDEMIR", type: "Вантажне судно/тип Балкер", country: "Панама 🇵🇦", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "FIRAT", type: "Вантажне судно", country: "Коморос 🇰🇲", direction: "Вниз по течії", location: "69 миля" },
+            { name: "UNITANK", type: "Танкер", country: "Румунія 🇷🇴", direction: "Вниз по течії", location: "Траверз 19 причалу" },
+            { name: "GAS SPANAKOPITA", type: "Танкер для перевезення зрідженого нафтового газу", country: "Сьєрра-Леоне 🇸🇱", direction: "Вниз по течії", location: "Траверз 19 причалу" },
+            { name: "BAHAR", type: "Вантажне судно", country: "Камерун 🇨🇲", direction: "Вниз по течії", location: "Траверз 19 причалу" },
+            { name: "DORIS DEYMANN", type: "Танкер", country: "Німеччина 🇩🇪", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "MUENCHEN", type: "Буксир + декілька барж (Вантажне судно)", country: "Австрія 🇦🇹", direction: "Вниз по течії", location: "69 миля" },
+            { name: "BRAVE KNIGHT", type: "Суховантаж (Балкер)", country: "Ліван 🇱🇧", direction: "Вверх проти течії", location: "70 миля" },
+            { name: "VALMIERA", type: "Вантажне судно (тип Балкер)", country: "Коморос 🇰🇲", direction: "Вниз по течії", location: "Траверз 19 причалу" },
+            { name: "VOLUNTAS & BARGE", type: "Танкер", country: "Словаччина 🇸🇰", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "CHELSEA-2", type: "Вантажне судно", country: "Мальта 🇲🇹", direction: "Вниз по течії", location: "69 миля" },
+            { name: "BRITTA-K", type: "Перевізник худоби (Скотовоз)", country: "Коморос 🇰🇲", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "SCALA", type: "Вантажне судно", country: "Ліберія 🇱🇷", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "MATRICO", type: "Танкер", country: "Румунія 🇷🇴", direction: "Вниз по течії", location: "70 миля" },
+            { name: "ALEXANDRIA", type: "Танкер", country: "Словаччина 🇸🇰", direction: "Вниз по течії", location: "70 миля" },
+            { name: "CT TRADER", type: "Танкер для перевезення хімічних та нафтопродуктів", country: "Сент-Кіттс і Невіс 🇰🇳", direction: "Вверх проти течії", location: "Траверз 4 причалу" },
+            { name: "SV.AP.ANDREY", type: "Вантажне судно", country: "Болгарія 🇧🇬", direction: "Вниз по течії", location: "Траверз 4 причалу" },
+            { name: "AHMET CAN", type: "Вантажне судно", country: "Панама 🇵🇦", direction: "Вверх проти течії", location: "Траверз 4 причалу" },
+            { name: "KAPITAN SHYRIAGIN", type: "Вантажне судно", country: "Танзанія 🇹🇿", direction: "Вверх проти течії", location: "Траверз 4 причалу" },
+            { name: "FREBERG", type: "Вантажне судно", country: "Панама 🇵🇦", direction: "Вверх проти течії", location: "Траверз 4 причалу" },
+            { name: "DB HAMBURG", type: "Танкер", country: "Словаччина 🇸🇰", direction: "Вверх проти течії", location: "Траверз 4 причалу" },
+            { name: "HRON 4", type: "Буксир", country: "Словаччина 🇸🇰", direction: "Вверх проти течії", location: "Траверз 4 причалу" },
+            { name: "DREMORA 2", type: "Вантажне судно", country: "Сент-Кітс і Невіс 🇰🇳", direction: "Вверх проти течії", location: "69 миля" },
+            { name: "SEAGAS MAJOR", type: "Танкер для перевезення зрідженого нафтового газу", country: "Ліберія 🇱🇷", direction: "Вниз по течії", location: "69 миля" },
+            { name: "ECO CHIOS", type: "Танкер для зрідженого нафтового газу", country: "Маршаллові Острови 🇲🇭", direction: "Вниз по течії", location: "54 миля" },
+            { name: "BAUSTELLA", type: "Танкер", country: "Гонконг 🇭🇰", direction: "Вниз по течії", location: "54 миля" },
+            { name: "PEREIASLAVSKYI", type: "Вантажне судно", country: "Україна 🇺🇦", direction: "Вверх проти течії", location: "54 миля" },
+            { name: "UBC SOFTOIL/SHALIMOV", type: "Танкер", country: "Словаччина 🇸🇰", direction: "Вниз по течії", location: "54 миля" },
+            { name: "LUCAS", type: "Танкер", country: "Словаччина 🇸🇰", direction: "Вниз по течії", location: "54 миля" },
+            { name: "RIVER RAIN", type: "Вантажне судно", country: "Палау 🇵🇼", direction: "Вниз по течії", location: "54 миля" },
+            { name: "BUSTENI", type: "Буксир", country: "Румунія 🇷🇴", direction: "Вниз по течії", location: "54 миля" },
+            { name: "DANUBE VOYAGER", type: "Буксир + баржі", country: "Румунія 🇷🇴", direction: "Вниз по течії", location: "54 миля" },
+            { name: "ASPHALT TERANGA", type: "Танкер-бітумовоз", country: "Панама 🇵🇦", direction: "Вниз по течії", location: "54 миля" },
+            { name: "GAZ REDSEA", type: "Танкер для зрідженого нафтового газу", country: "Мальта 🇲🇹", direction: "Вниз по течії", location: "54 миля" },
+            { name: "MUSTAFA NECATI", type: "Танкер для перевезення хіміко-нафтопродуктів", country: "Ліберія 🇱🇷", direction: "Вверх проти течії", location: "54 миля" },
+            { name: "POLKOVNIK FESENKO V.K", type: "Вантажне судно", country: "Камерун 🇨🇲", direction: "Вверх проти течії", location: "54 миля" },
+            { name: "FIRTINA S", type: "Вантажне судно", country: "Вануату 🇻🇺", direction: "Вниз по течії", location: "54 миля" },
+            { name: "KELHEIM", type: "Буксир + декілька барж", country: "Україна 🇺🇦", direction: "Вниз по течії", location: "54 миля" },
+            { name: "LINZ", type: "Буксир+Баржа", country: "Словаччина 🇸🇰", direction: "Вверх проти течії", location: "54 миля" },
+            { name: "SWIMMER.M", type: "Вантажне судно", country: "Сент-Кіттс і Невіс 🇰🇳", direction: "Вверх проти течії", location: "54 миля" },
+            { name: "ANNAPURNA", type: "Вантажне судно", country: "Палау 🇵🇼", direction: "Вниз по течії", location: "54 миля" },
+            { name: "ISLAND 7", type: "Пассажирський/Ro-Ro Вантажний корабль", country: "Сент-Вінсент і Ґренадіни 🇻🇨", direction: "Вниз по течії", location: "54 миля" },
+            { name: "ASTROS", type: "Вантажне судно", country: "Тоґо/Танзанія 🇹🇿 🇹🇬", direction: "Вниз по течії", location: "54 миля" },
+            { name: "FORTUNA", type: "Вантажне судно", country: "Коморос 🇰🇲", direction: "Вверх проти течії", location: "Траверз 3 причалу" },
+            { name: "SPIRIDON II", type: "Перевізник худоби", country: "Тоґо 🇹🇬", direction: "Вверх проти течії", location: "Траверз 3 причалу" },
+            { name: "BO ELISE", type: "Танкер", country: "Болгарія 🇧🇬", direction: "Вниз по течії", location: "54 миля" },
+            { name: "ATTILL", type: "Буксир", country: "Словаччина 🇸🇰", direction: "Вниз по течії", location: "54 миля" }
+        ];
+
+        const searchInput = document.getElementById('searchInput');
+        const countrySelect = document.getElementById('countrySelect');
+        const typeSelect = document.getElementById('typeSelect');
+        const directionSelect = document.getElementById('directionSelect');
+        const locationSelect = document.getElementById('locationSelect');
+        const shipList = document.getElementById('shipList');
+
+        const allCountries = [
+            "Австрія 🇦🇹", "Азербайджан 🇦🇿", "Барбадос 🇧🇧", "Болгарія 🇧🇬", "Вануату 🇻🇺", 
+            "Велика Британія 🇬🇧", "Гамбія 🇬🇲", "Гондурас 🇭🇳", "Гонконг 🇭🇰", "Греція 🇬🇷", 
+            "Данія 🇩🇰", "Італія 🇮🇹", "Іспанія 🇪🇸", "Камерун 🇨🇲", "Кіпр 🇨🇾", "Китай 🇨🇳", 
+            "Коморос 🇰🇲", "Ліберія 🇱🇷", "Ліван 🇱🇧", "Мальта 🇲🇹", "Маршаллові Острови 🇲🇭", 
+            "Нідерланди 🇳🇱", "Німеччина 🇩🇪", "Норвегія 🇳🇴", "Палау 🇵🇼", "Панама 🇵🇦", 
+            "Південна Корея 🇰🇷", "Португалія 🇵🇹", "Румунія 🇷🇴", "Сент-Вінсент і Ґренадіни 🇻🇨", 
+            "Сент-Кітс і Невіс 🇰🇳", "Сінгапур 🇸🇬", "Словаччина 🇸🇰", "США 🇺🇸", 
+            "Сьєрра-Леоне 🇸🇱", "Танзанія 🇹🇿", "Тоґо 🇹🇬", "Тоґо/Танзанія 🇹🇿 🇹🇬", 
+            "Туреччина 🇹🇷", "Україна 🇺🇦", "Федерація Сент-Крістофер і Невіс 🇰🇳", "Японія 🇯🇵"
+        ];
+
+        function populateFilters() {
+            const uniqueCountries = [...new Set([...allCountries, ...ships.map(s => s.country)])].sort();
+            uniqueCountries.forEach(c => countrySelect.innerHTML += `<option value="${c}">${c}</option>`);
+
+            const types = [...new Set(ships.map(s => s.type))].sort();
+            types.forEach(t => typeSelect.innerHTML += `<option value="${t}">${t}</option>`);
+
+            const directions = [...new Set(ships.map(s => s.direction))].sort();
+            directions.forEach(d => directionSelect.innerHTML += `<option value="${d}">${d}</option>`);
+            
+            for (let i = 1; i <= 130; i++) {
+                locationSelect.innerHTML += `<option value="${i} миля">${i} миля</option>`;
+            }
+            for (let i = 1; i <= 60; i++) {
+                locationSelect.innerHTML += `<option value="Траверз ${i} причалу">Траверз ${i} причалу</option>`;
+            }
+        }
+
+        function renderShips(filteredShips) {
+            shipList.innerHTML = '';
+            
+            if (filteredShips.length === 0) {
+                shipList.innerHTML = '<div class="no-results">Суден не знайдено ❌</div>';
+                return;
+            }
+
+            filteredShips.forEach(ship => {
+                const card = document.createElement('div');
+                card.className = 'ship-card';
+                card.innerHTML = `
+                    <div class="ship-name">${ship.name}</div>
+                    <div class="ship-detail"><strong>Тип:</strong> <span>${ship.type}</span></div>
+                    <div class="ship-detail"><strong>Країна:</strong> <span>${ship.country}</span></div>
+                    <div class="ship-detail"><strong>Напрямок:</strong> <span>${ship.direction}</span></div>
+                    <div class="ship-detail"><strong>Локація:</strong> <span>${ship.location}</span></div>
+                `;
+
+                // Створюємо кнопку копіювання
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.innerText = '📋 Копіювати дані';
+                
+                copyBtn.onclick = () => {
+                    // Форматуємо текст з нового рядка
+                    const textToCopy = `${ship.name}\n${ship.type}\n${ship.country}\n${ship.direction}\n${ship.location}`;
+                    
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        // Візуальне підтвердження
+                        copyBtn.innerText = '✅ Скопійовано!';
+                        copyBtn.style.backgroundColor = 'var(--success)';
+                        copyBtn.style.color = 'white';
+                        
+                        // Повертаємо початковий вигляд через 2 секунди
+                        setTimeout(() => {
+                            copyBtn.innerText = '📋 Копіювати дані';
+                            copyBtn.style.backgroundColor = '#3a3a3a';
+                            copyBtn.style.color = 'var(--text-main)';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Помилка копіювання: ', err);
+                        alert('Не вдалося скопіювати текст. Перевір налаштування браузера.');
+                    });
+                };
+
+                card.appendChild(copyBtn);
+                shipList.appendChild(card);
+            });
+        }
+
+        function filterData() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const countryFilter = countrySelect.value;
+            const typeFilter = typeSelect.value;
+            const directionFilter = directionSelect.value;
+            const locationFilter = locationSelect.value;
+
+            const filtered = ships.filter(ship => {
+                const matchName = ship.name.toLowerCase().includes(searchTerm);
+                const matchCountry = countryFilter === "" || ship.country === countryFilter;
+                const matchType = typeFilter === "" || ship.type === typeFilter;
+                const matchDirection = directionFilter === "" || ship.direction === directionFilter;
+                const matchLocation = locationFilter === "" || ship.location === locationFilter;
+
+                return matchName && matchCountry && matchType && matchDirection && matchLocation;
+            });
+
+            renderShips(filtered);
+        }
+
+        searchInput.addEventListener('input', filterData);
+        countrySelect.addEventListener('change', filterData);
+        typeSelect.addEventListener('change', filterData);
+        directionSelect.addEventListener('change', filterData);
+        locationSelect.addEventListener('change', filterData);
+
+        populateFilters();
+        renderShips(ships);
+    </script>
+
+</body>
+</html>
